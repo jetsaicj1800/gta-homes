@@ -41,7 +41,7 @@ dialog{border:0;border-radius:14px;max-width:640px;width:95%}
 <label>Max price<input id="sMax" type="number" value="2500000" step="50000"></label>
 <label>Beds (min)<select id="sBeds"><option value="0">Any</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
 <label>Baths (min)<select id="sBaths"><option value="0">Any</option><option>1</option><option>2</option><option selected>3</option><option>4</option></select></label>
-<label>Property type<select id="sType"><option value="any">Any</option><option value="house" selected>Detached / Semi house</option><option value="town">Townhouse</option><option value="condo">Condo / Apartment</option></select></label>
+<label style="grid-column:1/-1">Property type<span id="sType" style="display:flex;flex-wrap:wrap;gap:6px 14px"><label class="chk"><input type="checkbox" value="detached" checked>Detached</label><label class="chk"><input type="checkbox" value="semi">Semi-detached</label><label class="chk"><input type="checkbox" value="town">Townhouse</label><label class="chk"><input type="checkbox" value="condo">Condo / Apartment</label></span></label>
 </div><p class="note">Links open each site's own search in a new tab — no listing data is copied here. Some sites ignore filters in links; set them again on the site if needed.</p></div>
 <div class="card"><h2 id="sTitle">Results links</h2><div class="links" id="sLinks"></div></div>
 </section>
@@ -62,7 +62,7 @@ dialog{border:0;border-radius:14px;max-width:640px;width:95%}
 <label style="grid-column:1/-1">Address<input name="address" required></label>
 <label style="grid-column:1/-1">Listing link<input name="link" type="url" placeholder="https://"></label>
 <label>Price<input name="price" type="number"></label><label>Beds<input name="beds" type="number" step="0.5"></label><label>Baths<input name="baths" type="number" step="0.5"></label>
-<label>Type<select name="type"><option>Detached</option><option>Semi</option><option>Townhouse</option><option>Condo</option><option>Other</option></select></label>
+<label>Type<select name="type"><option>Detached</option><option>Semi-detached</option><option>Townhouse</option><option>Condo</option><option>Other</option></select></label>
 <label>Buy/Rent<select name="mode"><option>Buy</option><option>Rent</option></select></label>
 <label>Status<select name="status"></select></label>
 <label>Rating<select name="rating"><option value="0">–</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
@@ -154,30 +154,29 @@ function searchLinks(){
  $('#sLinks').innerHTML=out||'<p class=note>Pick at least one area.</p>';$('#sTitle').textContent=`${$('#sMode').value} — ${sel.length} area(s)`;
 }
 function areaLinks(a){
- const [name,city,lat,lng,z]=a,mode=$('#sMode').value,min=+$('#sMin').value||0,max=+$('#sMax').value||0,beds=+$('#sBeds').value,baths=+$('#sBaths').value,type=$('#sType').value;
+ const [name,city,lat,lng,z]=a,mode=$('#sMode').value,min=+$('#sMin').value||0,max=+$('#sMax').value||0,beds=+$('#sBeds').value,baths=+$('#sBaths').value,types=$$('#sType input:checked').map(e=>e.value);
  const cs=slug(city),cz=city.replace(/ /g,'-'),q=encodeURIComponent((name.includes('(')?city:name)+', ON');
  const d=z>=13?0.06:z>=12?0.12:0.25;const L=[];
- const realtor=(tt)=>{let h=`ZoomLevel=${z}&Center=${lat}%2C${lng}&LatitudeMax=${(lat+d).toFixed(4)}&LongitudeMax=${(lng+d*1.6).toFixed(4)}&LatitudeMin=${(lat-d).toFixed(4)}&LongitudeMin=${(lng-d*1.6).toFixed(4)}&Sort=6-D&PropertyTypeGroupID=1&TransactionTypeId=${tt}&PropertySearchTypeId=0&Currency=CAD`;
+ const RT={detached:['Detached','&BuildingTypeId=1&ConstructionStyleId=3'],semi:['Semi-detached','&BuildingTypeId=1&ConstructionStyleId=5'],town:['Townhouse','&BuildingTypeId=16'],condo:['Condo/Apt','&BuildingTypeId=17']};
+ const realtor=(tt,type)=>{let h=`ZoomLevel=${z}&Center=${lat}%2C${lng}&LatitudeMax=${(lat+d).toFixed(4)}&LongitudeMax=${(lng+d*1.6).toFixed(4)}&LatitudeMin=${(lat-d).toFixed(4)}&LongitudeMin=${(lng-d*1.6).toFixed(4)}&Sort=6-D&PropertyTypeGroupID=1&TransactionTypeId=${tt}&PropertySearchTypeId=0&Currency=CAD`;
    if(min)h+=(tt==3?'&RentMin=':'&PriceMin=')+min;if(max)h+=(tt==3?'&RentMax=':'&PriceMax=')+max;if(beds)h+=`&BedRange=${beds}-0`;if(baths)h+=`&BathRange=${baths}-0`;
-   if(type=='condo')h+='&BuildingTypeId=17';else if(type=='house')h+='&BuildingTypeId=1';else if(type=='town')h+='&BuildingTypeId=16';
+   if(RT[type])h+=RT[type][1];
    return 'https://www.realtor.ca/map#'+h;};
  const zfilter=()=>{const f={};if(min||max)f[mode=='Rent'?'mp':'price']={...(min&&{min}),...(max&&{max})};if(beds)f.beds={min:beds};if(baths)f.baths={min:baths};if(mode=='Rent')f.fr={value:true},f.fsba={value:false},f.fsbo={value:false},f.nc={value:false},f.cmsn={value:false},f.auc={value:false},f.fore={value:false};
-   if(type=='condo')f.sf={value:false},f.tow={value:false},f.mf={value:false},f.land={value:false},f.manu={value:false};
-   if(type=='house')f.con={value:false},f.apa={value:false},f.apco={value:false},f.tow={value:false};
-   if(type=='town')f.sf={value:false},f.con={value:false},f.apa={value:false},f.apco={value:false},f.mf={value:false},f.land={value:false},f.manu={value:false};
+   if(types.length){const hs=types.includes('detached')||types.includes('semi'),off={value:false};if(!hs)f.sf=off;if(!types.includes('town'))f.tow=off;if(!types.includes('condo'))f.con=off,f.apa=off,f.apco=off;f.mf=off;f.land=off;f.manu=off;}
    return '?searchQueryState='+encodeURIComponent(JSON.stringify({usersSearchTerm:`${city}, ON`,filterState:f}));};
  const add=(site,label,url,sub)=>L.push({site,label,url,sub});
  if(mode=='Buy'){
-  add('realtor.ca','Homes for sale',realtor(2),'Official CREA MLS® map — price, beds & type applied');
+  (types.length?types:[null]).forEach(t=>add('realtor.ca',(t?RT[t][0]+' ':'Homes ')+'for sale',realtor(2,t),'Official MLS® map — price, beds, baths & type applied'));
   add('HouseSigma','Map: for sale + sold history',`https://housesigma.com/on/map/?lat=${lat}&lon=${lng}&zoom=${z}`,'Free account shows sold prices; set filters on map');
-  add('Zillow','Homes for sale',`https://www.zillow.com/${cz.toLowerCase()}-on/${zfilter()}`,'Zillow shows Canadian MLS listings');
+  add('Zillow','Homes for sale',`https://www.zillow.com/${cz.toLowerCase()}-on/${zfilter()}`,'Detached+semi combined as houses (Zillow has no semi filter)');
   add('Zoocasa','Homes for sale',`https://www.zoocasa.com/${cs}-on-real-estate`,'Includes sold data with sign-in');
   add('Condos.ca','Condos for sale',`https://condos.ca/${cs}/condos-for-sale`,'Best for condos & building info');
   add('Strata.ca','Condos for sale',`https://strata.ca/${cs}/condos-for-sale`,'Condo buildings & price history');
   add('Redfin.ca','Search area',`https://www.redfin.ca/?q=${q}`,'Type the area into Redfin search if not pre-filled');
   add('Google','All listings in area',`https://www.google.com/search?q=${encodeURIComponent(name+' Ontario homes for sale'+(max?' under $'+max:''))}`,'Catch-all web search');
  }else if(mode=='Rent'){
-  add('realtor.ca','Homes for rent',realtor(3),'MLS® rentals — rent range, beds & type applied');
+  (types.length?types:[null]).forEach(t=>add('realtor.ca',(t?RT[t][0]+' ':'Homes ')+'for rent',realtor(3,t),'MLS® rentals with filters'));
   add('Rentals.ca','Rentals',`https://rentals.ca/${cs}`,'Large Canadian rental site');
   add('PadMapper','Apartments for rent',`https://www.padmapper.com/apartments/${cs}-on`,'Map-based rentals');
   add('Kijiji','Real estate for rent',`https://www.kijiji.ca/b-for-rent/ontario/${encodeURIComponent(city.toLowerCase())}/k0c30349001l9004`,'Private landlords — beware of scams');
@@ -189,7 +188,7 @@ function areaLinks(a){
   add('HouseSigma','Home value estimate',`https://housesigma.com/on/home-valuation/`,'Free AI estimate + sold comps (sign-in)');
   add('HouseSigma','Sold prices on map',`https://housesigma.com/on/map/?lat=${lat}&lon=${lng}&zoom=${z}`,'Switch map to “Sold” for comparables');
   add('realtor.ca','Find a REALTOR®',`https://www.realtor.ca/realtor-search-results#city=${encodeURIComponent(city)}&province=2`,'Search agents near you');
-  add('realtor.ca','Active competition',realtor(2),'See what similar homes are listed at');
+  add('realtor.ca','Active competition',realtor(2,types[0]),'See what similar homes are listed at');
   add('Zillow','Zestimate / owner view',`https://www.zillow.com/how-much-is-my-home-worth/`,'Coverage in Canada may be limited');
   add('Zoocasa','Home value',`https://www.zoocasa.com/home-value-estimator`,'');
   add('TRREB','Market stats',`https://trreb.ca/market-data/`,'Monthly GTA price & sales reports');
