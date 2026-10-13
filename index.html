@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GTA Home Search Helper</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><title>GTA Home Search Helper</title>
 <style>
 :root{--b:#1f5eff;--bg:#f4f6fb;--c:#fff;--t:#1b2333;--m:#667085;--bd:#e3e7ef}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--t)}
@@ -30,7 +30,7 @@ tr.tot td{font-weight:700;border-top:2px solid var(--t)}
 dialog{border:0;border-radius:14px;max-width:640px;width:95%}
 </style></head><body>
 <header><h1>🏡 GTA Home Search Helper</h1><p>Personal search launcher, home tracker & Ontario mortgage / closing-cost calculator</p>
-<nav><button data-t="search" class="on">Search</button><button data-t="tracker">Tracker</button><button data-t="calc">Calculator</button><button data-t="schools">Schools</button></nav></header>
+<nav><button data-t="search" class="on">Search</button><button data-t="tracker">Tracker</button><button data-t="calc">Calculator</button><button data-t="map">Map</button><button data-t="schools">Schools</button></nav></header>
 <main>
 <!-- SEARCH -->
 <section id="search" class="on">
@@ -41,7 +41,7 @@ dialog{border:0;border-radius:14px;max-width:640px;width:95%}
 <label>Max price<input id="sMax" type="number" value="2500000" step="50000"></label>
 <label>Beds (min)<select id="sBeds"><option value="0">Any</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
 <label>Baths (min)<select id="sBaths"><option value="0">Any</option><option>1</option><option>2</option><option selected>3</option><option>4</option></select></label>
-<label style="grid-column:1/-1">Property type<span id="sType" style="display:flex;flex-wrap:wrap;gap:6px 14px"><label class="chk"><input type="checkbox" value="detached" checked>Detached</label><label class="chk"><input type="checkbox" value="semi">Semi-detached</label><label class="chk"><input type="checkbox" value="town">Townhouse</label><label class="chk"><input type="checkbox" value="condo">Condo / Apartment</label></span></label>
+<label style="grid-column:1/-1">Property type<span id="sType" style="display:flex;flex-wrap:wrap;gap:6px 14px"><label class="chk"><input type="checkbox" value="detached" checked>Detached</label><label class="chk"><input type="checkbox" value="semi">Semi-detached</label><label class="chk"><input type="checkbox" value="ftown">Freehold townhouse</label><label class="chk"><input type="checkbox" value="ctown">Condo townhouse</label><label class="chk"><input type="checkbox" value="condo">Condo / Apartment</label></span></label>
 </div><p class="note">Links open each site's own search in a new tab — no listing data is copied here. Some sites ignore filters in links; set them again on the site if needed.</p></div>
 <div class="card"><h2 id="sTitle">Results links</h2><div class="links" id="sLinks"></div></div>
 </section>
@@ -62,13 +62,19 @@ dialog{border:0;border-radius:14px;max-width:640px;width:95%}
 <label style="grid-column:1/-1">Address<input name="address" required></label>
 <label style="grid-column:1/-1">Listing link<input name="link" type="url" placeholder="https://"></label>
 <label>Price<input name="price" type="number"></label><label>Beds<input name="beds" type="number" step="0.5"></label><label>Baths<input name="baths" type="number" step="0.5"></label>
-<label>Type<select name="type"><option>Detached</option><option>Semi-detached</option><option>Townhouse</option><option>Condo</option><option>Other</option></select></label>
+<label>Type<select name="type"><option>Detached</option><option>Semi-detached</option><option>Freehold townhouse</option><option>Condo townhouse</option><option>Condo</option><option>Other</option></select></label>
 <label>Buy/Rent<select name="mode"><option>Buy</option><option>Rent</option></select></label>
 <label>Status<select name="status"></select></label>
 <label>Rating<select name="rating"><option value="0">–</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
-<label style="grid-column:1/-1">School zone / school<input name="school" placeholder="e.g. Earl Haig SS, McKee PS"></label><label style="grid-column:1/-1">Notes<textarea name="notes" rows="3"></textarea></label></div>
+<label>Latitude (optional)<input name="lat" type="number" step="any"></label><label>Longitude (optional)<input name="lng" type="number" step="any"></label><label style="grid-column:1/-1">School zone / school<input name="school" placeholder="e.g. Earl Haig SS, McKee PS"></label><label style="grid-column:1/-1">Notes<textarea name="notes" rows="3"></textarea></label></div>
 <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sec" value="cancel" formnovalidate>Cancel</button><button class="btn" value="ok">Save</button></div></form></dialog>
 </section>
+<section id="map"><div class="card"><div class="grid">
+<label>Status<select id="mfStatus"><option value="">All</option></select></label>
+<label>Type<select id="mfType"><option value="">All</option><option>Detached</option><option>Semi-detached</option><option>Freehold townhouse</option><option>Condo townhouse</option><option>Condo</option><option>Other</option></select></label>
+<label>Min price<input id="mfMin" type="number" step="50000"></label><label>Max price<input id="mfMax" type="number" step="50000"></label>
+</div><div class="row" style="margin-top:10px"><button class="btn sec" id="geoBtn">Geocode missing addresses</button><span class="note" id="geoMsg"></span></div><div class="row note" id="legend" style="margin-top:8px"></div></div>
+<div id="leaf" style="height:560px;border-radius:14px;border:1px solid var(--bd)"></div><p class="note">Map © OpenStreetMap contributors. Geocoding by Nominatim (1 request/sec; results saved to each home). You can also type lat/lng into a home yourself.</p></section>
 <section id="schools"><div class="card"><h2>Schools & school zones</h2><p class="note">Check boundaries by exact address with the board — a top-ranked school nearby doesn't mean the home is in its catchment, and boundaries/caps change. Save the zoned school in the Tracker's “School zone” field.</p><div class="links" id="schLinks"></div></div></section>
 <!-- CALC -->
 <section id="calc">
@@ -157,13 +163,13 @@ function areaLinks(a){
  const [name,city,lat,lng,z]=a,mode=$('#sMode').value,min=+$('#sMin').value||0,max=+$('#sMax').value||0,beds=+$('#sBeds').value,baths=+$('#sBaths').value,types=$$('#sType input:checked').map(e=>e.value);
  const cs=slug(city),cz=city.replace(/ /g,'-'),q=encodeURIComponent((name.includes('(')?city:name)+', ON');
  const d=z>=13?0.06:z>=12?0.12:0.25;const L=[];
- const RT={detached:['Detached','&BuildingTypeId=1&ConstructionStyleId=3'],semi:['Semi-detached','&BuildingTypeId=1&ConstructionStyleId=5'],town:['Townhouse','&BuildingTypeId=16'],condo:['Condo/Apt','&BuildingTypeId=17']};
+ const RT={detached:['Detached','&BuildingTypeId=1&ConstructionStyleId=3'],semi:['Semi-detached','&BuildingTypeId=1&ConstructionStyleId=5'],ftown:['Freehold townhouse','&BuildingTypeId=16&OwnershipTypeGroupId=1'],ctown:['Condo townhouse','&BuildingTypeId=16&OwnershipTypeGroupId=2'],condo:['Condo/Apt','&BuildingTypeId=17']};
  const realtor=(tt,type)=>{let h=`ZoomLevel=${z}&Center=${lat}%2C${lng}&LatitudeMax=${(lat+d).toFixed(4)}&LongitudeMax=${(lng+d*1.6).toFixed(4)}&LatitudeMin=${(lat-d).toFixed(4)}&LongitudeMin=${(lng-d*1.6).toFixed(4)}&Sort=6-D&PropertyTypeGroupID=1&TransactionTypeId=${tt}&PropertySearchTypeId=0&Currency=CAD`;
    if(min)h+=(tt==3?'&RentMin=':'&PriceMin=')+min;if(max)h+=(tt==3?'&RentMax=':'&PriceMax=')+max;if(beds)h+=`&BedRange=${beds}-0`;if(baths)h+=`&BathRange=${baths}-0`;
    if(RT[type])h+=RT[type][1];
    return 'https://www.realtor.ca/map#'+h;};
  const zfilter=()=>{const f={};if(min||max)f[mode=='Rent'?'mp':'price']={...(min&&{min}),...(max&&{max})};if(beds)f.beds={min:beds};if(baths)f.baths={min:baths};if(mode=='Rent')f.fr={value:true},f.fsba={value:false},f.fsbo={value:false},f.nc={value:false},f.cmsn={value:false},f.auc={value:false},f.fore={value:false};
-   if(types.length){const hs=types.includes('detached')||types.includes('semi'),off={value:false};if(!hs)f.sf=off;if(!types.includes('town'))f.tow=off;if(!types.includes('condo'))f.con=off,f.apa=off,f.apco=off;f.mf=off;f.land=off;f.manu=off;}
+   if(types.length){const hs=types.includes('detached')||types.includes('semi'),off={value:false};if(!hs)f.sf=off;if(!types.includes('ftown')&&!types.includes('ctown'))f.tow=off;if(!types.includes('condo'))f.con=off,f.apa=off,f.apco=off;f.mf=off;f.land=off;f.manu=off;}
    return '?searchQueryState='+encodeURIComponent(JSON.stringify({usersSearchTerm:`${city}, ON`,filterState:f}));};
  const add=(site,label,url,sub)=>L.push({site,label,url,sub});
  if(mode=='Buy'){
@@ -200,7 +206,7 @@ $$('#search select,#search input').forEach(e=>e.oninput=searchLinks);searchLinks
 const STATUSES=['Interested','Viewing booked','Viewed','Offer','Accepted','Rejected','Sold/Leased'];
 $('#fStatus').innerHTML+=STATUSES.map(s=>`<option>${s}</option>`).join('');$('[name=status]').innerHTML=STATUSES.map(s=>`<option>${s}</option>`).join('');
 let homes=JSON.parse(localStorage.getItem('gtaHomes')||'[]'),editing=null;
-const save=()=>{localStorage.setItem('gtaHomes',JSON.stringify(homes));renderT()};
+const save=()=>{localStorage.setItem('gtaHomes',JSON.stringify(homes));renderT();if(window.renderMap)renderMap()};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function renderT(){
  const q=$('#fQ').value.toLowerCase(),m=$('#fMode').value,st=$('#fStatus').value,so=$('#fSort').value;
@@ -219,7 +225,7 @@ window.delH=id=>{if(confirm('Delete this home?')){homes=homes.filter(h=>h.id!=id
 $('#dlg').onclose=()=>{if($('#dlg').returnValue!='ok')return;const d=Object.fromEntries(new FormData(form));
  if(editing)Object.assign(homes.find(h=>h.id==editing),d);else homes.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:Date.now(),...d});save();};
 window.toCalc=id=>{const h=homes.find(h=>h.id==id);if(!h.price)return alert('No price saved');if(h.mode=='Rent')$('#rRent').value=h.price;else{$('#cPrice').value=h.price;$('#cCondo').checked=h.type=='Condo';}calc();$('nav button[data-t=calc]').click();};
-const FIELDS=['address','school','link','price','beds','baths','type','mode','status','rating','notes','added','id'];
+const FIELDS=['address','school','lat','lng','link','price','beds','baths','type','mode','status','rating','notes','added','id'];
 const dl=(name,txt,mime)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:mime}));a.download=name;a.click();};
 $('#tExJ').onclick=()=>dl('gta-homes.json',JSON.stringify(homes,null,2),'application/json');
 const csvCell=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
@@ -282,4 +288,25 @@ const SCH=[['Fraser Institute rankings (Ontario elementary)','https://www.compar
 ['Zoocasa school search','https://www.zoocasa.com/schools','Search homes by school catchment'],
 ['French Immersion / gifted programs (TDSB)','https://www.tdsb.on.ca/Elementary-School/Programs','Program availability differs from home school']];
 document.getElementById('schLinks').innerHTML=SCH.map(s=>`<a href="${s[1]}" target="_blank" rel="noopener noreferrer"><b>${s[0]}</b><small>${s[2]}</small></a>`).join('');
+
+// ---------- MAP ----------
+const SCOL={'Interested':'#1f5eff','Viewing booked':'#7a3df0','Viewed':'#f79009','Offer':'#12b76a','Accepted':'#067647','Rejected':'#d92d20','Sold/Leased':'#667085'};
+$('#mfStatus').innerHTML+=STATUSES.map(s=>`<option>${s}</option>`).join('');
+$('#legend').innerHTML=Object.entries(SCOL).map(([s,c])=>`<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c}"></span> ${s}</span>`).join(' ');
+let lmap,layer;
+window.renderMap=()=>{if(!window.L||!$('#map').classList.contains('on'))return;
+ if(!lmap){lmap=L.map('leaf').setView([43.80,-79.41],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(lmap);layer=L.layerGroup().addTo(lmap);}
+ lmap.invalidateSize();layer.clearLayers();const st=$('#mfStatus').value,ty=$('#mfType').value,mn=+$('#mfMin').value||0,mx=+$('#mfMax').value||Infinity;const pts=[];
+ homes.filter(h=>h.lat&&h.lng&&(!st||h.status==st)&&(!ty||h.type==ty)&&(!h.price||(+h.price>=mn&&+h.price<=mx))).forEach(h=>{const ll=[+h.lat,+h.lng];pts.push(ll);
+  L.circleMarker(ll,{radius:9,color:'#fff',weight:2,fillColor:SCOL[h.status]||'#1f5eff',fillOpacity:.95}).addTo(layer).bindPopup(`<b>${esc(h.address)}</b><br>${h.price?fmt(+h.price):''}${h.mode=='Rent'?'/mo':''} · ${esc(h.beds)} bd / ${esc(h.baths)} ba<br>${esc(h.type)} · ${esc(h.status)}${h.school?'<br>🎓 '+esc(h.school):''}${h.link?`<br><a href="${esc(h.link)}" target="_blank" rel="noopener">Open listing</a>`:''}`);});
+ if(pts.length)lmap.fitBounds(pts,{padding:[30,30],maxZoom:15});
+ $('#geoMsg').textContent=`${pts.length} pin(s) shown · ${homes.filter(h=>!(h.lat&&h.lng)).length} home(s) without coordinates`;};
+['#mfStatus','#mfType','#mfMin','#mfMax'].forEach(s=>$(s).oninput=renderMap);
+$('nav button[data-t=map]').addEventListener('click',()=>setTimeout(renderMap,50));
+$('#geoBtn').onclick=async()=>{const todo=homes.filter(h=>!(h.lat&&h.lng)&&h.address);let ok=0;
+ for(const h of todo){$('#geoMsg').textContent=`Geocoding ${h.address}…`;
+  try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q='+encodeURIComponent(/ontario|, on\b/i.test(h.address)?h.address:h.address+', Ontario'));const j=await r.json();if(j[0]){h.lat=(+j[0].lat).toFixed(6);h.lng=(+j[0].lon).toFixed(6);ok++;}}catch(e){}
+  await new Promise(r=>setTimeout(r,1100));}
+ localStorage.setItem('gtaHomes',JSON.stringify(homes));renderMap();$('#geoMsg').textContent+=` · geocoded ${ok}/${todo.length}`;};
+if(location.hash=='#map')setTimeout(renderMap,100);
 </script></body></html>
